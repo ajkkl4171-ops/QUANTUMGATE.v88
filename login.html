@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Gate | Real Auth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .glass { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
+</head>
+<body class="h-screen flex items-center justify-center bg-slate-950 overflow-hidden relative">
+
+    <div class="glass w-full max-w-md rounded-2xl p-8 shadow-2xl relative z-10 border-t border-slate-700">
+        <h1 class="text-2xl font-bold text-center mb-6">Quantum<span class="text-purple-500">Auth</span></h1>
+        
+        <div class="flex bg-slate-900/50 rounded-lg mb-6 p-1">
+            <button onclick="setMode('login')" id="btnLoginMode" class="flex-1 py-2 rounded text-xs font-bold bg-slate-700">LOGIN</button>
+            <button onclick="setMode('register')" id="btnRegMode" class="flex-1 py-2 rounded text-xs font-bold text-slate-500">REGISTER</button>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="text-[10px] uppercase font-bold text-slate-500">Email / WhatsApp</label>
+                <input id="contactInput" type="text" placeholder="user@gmail.com" class="w-full bg-slate-950 border border-slate-700 rounded p-3 text-sm text-white outline-none focus:border-purple-500">
+            </div>
+
+            <button id="btnSendCode" onclick="sendRealCode()" class="hidden w-full bg-blue-600 hover:bg-blue-500 text-white text-xs py-2 rounded font-bold">ENVIAR CÓDIGO REAL</button>
+
+            <div id="otpGroup" class="hidden">
+                <label class="text-[10px] uppercase font-bold text-green-400">Código de Verificación</label>
+                <input id="otpInput" type="text" placeholder="12345" class="w-full bg-slate-950 border border-green-500/50 rounded p-3 text-sm text-white mono tracking-widest">
+            </div>
+
+            <div>
+                <label class="text-[10px] uppercase font-bold text-slate-500">Password</label>
+                <input id="passInput" type="password" placeholder="••••••" class="w-full bg-slate-950 border border-slate-700 rounded p-3 text-sm text-white outline-none">
+            </div>
+
+            <button onclick="executeAction()" id="actionBtn" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg text-sm transition-all shadow-lg shadow-purple-900/20">
+                INICIAR SESIÓN
+            </button>
+        </div>
+        
+        <div id="msg" class="text-center mt-4 text-xs font-bold h-4"></div>
+    </div>
+
+    <script>
+        let mode = 'login';
+        const API_URL = "http://127.0.0.1:5000"; // Tu servidor Python
+
+        function setMode(newMode) {
+            mode = newMode;
+            document.getElementById('btnLoginMode').className = mode === 'login' ? "flex-1 py-2 rounded text-xs font-bold bg-slate-700 text-white" : "flex-1 py-2 rounded text-xs font-bold text-slate-500";
+            document.getElementById('btnRegMode').className = mode === 'register' ? "flex-1 py-2 rounded text-xs font-bold bg-slate-700 text-white" : "flex-1 py-2 rounded text-xs font-bold text-slate-500";
+            
+            document.getElementById('btnSendCode').style.display = mode === 'register' ? 'block' : 'none';
+            document.getElementById('actionBtn').innerText = mode === 'login' ? "INICIAR SESIÓN" : "REGISTRARSE EN BASE DE DATOS";
+            document.getElementById('otpGroup').style.display = 'none';
+        }
+
+        async function sendRealCode() {
+            const contact = document.getElementById('contactInput').value;
+            if(!contact) return alert("Escribe un correo o número");
+
+            const btn = document.getElementById('btnSendCode');
+            btn.innerText = "ENVIANDO...";
+            btn.disabled = true;
+
+            // Detectar si es email o whatsapp (básico)
+            const type = contact.includes('@') ? 'email' : 'whatsapp';
+
+            try {
+                const res = await fetch(`${API_URL}/send-code`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contact, type })
+                });
+                const data = await res.json();
+                
+                if(data.status === 'success') {
+                    document.getElementById('otpGroup').style.display = 'block';
+                    document.getElementById('msg').innerText = "CÓDIGO ENVIADO. REVISA TU BANDEJA.";
+                    document.getElementById('msg').className = "text-center mt-4 text-xs font-bold text-green-400";
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (e) {
+                alert("Error conectando al servidor Python. ¿Lo encendiste?");
+            }
+            btn.innerText = "ENVIAR CÓDIGO REAL";
+            btn.disabled = false;
+        }
+
+        async function executeAction() {
+            const contact = document.getElementById('contactInput').value;
+            const password = document.getElementById('passInput').value;
+            const code = document.getElementById('otpInput').value;
+
+            if (mode === 'login') {
+                const res = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contact, password })
+                });
+                const data = await res.json();
+                if(data.status === 'success') window.location.href = data.redirect;
+                else alert(data.message);
+            } 
+            else {
+                // Registro
+                const res = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contact, password, code })
+                });
+                const data = await res.json();
+                if(data.status === 'success') {
+                    alert("Registro exitoso en Base de Datos SQL.");
+                    window.location.href = data.redirect;
+                } else {
+                    alert(data.message);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

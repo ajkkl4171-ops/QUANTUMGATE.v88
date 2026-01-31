@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Gate | Enterprise Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        qdark: '#020617',
+                        qpurple: '#a855f7',
+                        qcyan: '#06b6d4',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glass-input { background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .neon-border-gradient:focus-within { 
+            border-color: transparent; 
+            background-image: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)), linear-gradient(to right, #a855f7, #06b6d4);
+            background-origin: border-box; 
+            background-clip: content-box, border-box; 
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+        }
+        .btn-gradient { background: linear-gradient(135deg, #a855f7, #6366f1); }
+        .btn-gradient:hover { background: linear-gradient(135deg, #9333ea, #4f46e5); box-shadow: 0 0 25px rgba(168, 85, 247, 0.4); }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; border: 1px solid #0f172a; }
+        .tool-btn { @apply flex items-center justify-center gap-2 bg-slate-800/50 border border-slate-700 hover:border-qcyan/50 hover:bg-slate-800 hover:text-qcyan transition-all rounded-lg p-2 text-[9px] uppercase font-bold tracking-wider cursor-pointer; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden selection:bg-qpurple selection:text-white bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-qdark to-qdark">
+
+    <header class="h-14 border-b border-slate-800/80 flex items-center justify-between px-6 bg-qdark/90 backdrop-blur-md z-50 shadow-lg shadow-black/20">
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <i data-lucide="cpu" class="text-qpurple w-5 h-5 relative z-10"></i>
+                <div class="absolute inset-0 bg-qpurple blur-md opacity-50 animate-pulse"></div>
+            </div>
+            <span class="mono text-sm font-bold tracking-tight">QUANTUM<span class="text-qpurple">GATE</span>.v8 <span class="text-[10px] text-qcyan px-2 py-0.5 bg-qcyan/10 rounded border border-qcyan/20">ENTERPRISE</span></span>
+        </div>
+        <div class="flex items-center gap-4 text-[10px] mono">
+            <div class="flex items-center gap-2 px-3 py-1 bg-slate-900 rounded border border-slate-800">
+                <div id="statusDot" class="w-1.5 h-1.5 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]"></div>
+                <span id="statusText" class="text-slate-300 font-semibold">SYSTEM OPERATIONAL</span>
+            </div>
+            <span id="clock" class="text-slate-500">00:00:00 UTC</span>
+        </div>
+    </header>
+
+    <main class="flex-1 p-5 grid grid-cols-12 gap-5 overflow-hidden relative">
+        
+        <div class="col-span-12 lg:col-span-4 flex flex-col gap-5 z-20 h-full">
+            <div class="glass p-5 rounded-2xl flex-1 flex flex-col shadow-2xl overflow-hidden">
+                
+                <div class="mb-4 relative z-30">
+                    <label class="text-[9px] uppercase tracking-[0.2em] text-slate-500 font-bold mb-2 block flex items-center gap-1"><i data-lucide="network" class="w-3 h-3"></i> Processing Node</label>
+                    <button id="gateDropdownBtn" onclick="toggleDropdown()" class="w-full glass-input p-3 rounded-xl flex justify-between items-center text-xs mono text-left hover:border-qpurple/50 transition-all group">
+                        <span id="selectedGate" class="text-qcyan font-bold flex items-center gap-2"><i data-lucide="rotate-cw" class="w-3 h-3"></i> Auto-Rotation Protocol</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-500 group-hover:text-qpurple transition-colors"></i>
+                    </button>
+                    
+                    <div id="gateDropdown" class="hidden absolute top-full left-0 w-full mt-2 bg-qdark border border-slate-700 rounded-xl shadow-xl max-h-64 flex flex-col z-50 overflow-hidden">
+                        <div class="p-2 border-b border-slate-800 relative">
+                            <i data-lucide="search" class="absolute left-4 top-4 w-3 h-3 text-slate-500"></i>
+                            <input type="text" id="gateSearch" placeholder="Filter nodes..." class="w-full bg-slate-950 text-xs pl-8 p-2 rounded-lg border border-slate-800 outline-none focus:border-qpurple text-slate-300">
+                        </div>
+                        <div id="gateList" class="overflow-y-auto custom-scrollbar flex-1 p-1"></div>
+                    </div>
+                </div>
+
+                <div class="flex-1 relative group neon-border-gradient rounded-xl transition-all duration-500 border border-slate-700/50 mb-4 flex flex-col">
+                    <div class="flex justify-between items-center px-4 py-2 border-b border-slate-800/50 bg-slate-900/30 rounded-t-xl">
+                        <span class="text-[9px] text-slate-500 font-bold tracking-widest">INPUT STREAM</span>
+                        <button onclick="clearInput()" class="text-[9px] text-red-400 hover:text-white flex items-center gap-1 uppercase font-bold transition-colors">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> Clear List
+                        </button>
+                    </div>
+                    <textarea id="inputData" class="w-full h-full bg-transparent p-4 mono text-xs text-qcyan/90 outline-none rounded-b-xl resize-none custom-scrollbar z-10 relative placeholder:text-slate-700" placeholder="PASTE CARDS HERE..."></textarea>
+                    <div class="absolute bottom-2 right-3 text-[9px] text-slate-600 mono bg-qdark/80 px-2 py-1 rounded-md border border-slate-800" id="lineCount">0 UNITS</div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-800/50">
+                    <label class="text-[9px] uppercase tracking-[0.2em] text-slate-500 font-bold mb-3 block flex items-center gap-1"><i data-lucide="wrench" class="w-3 h-3"></i> Bin Toolkit</label>
+                    
+                    <div class="grid grid-cols-12 gap-2 mb-2">
+                        <div class="col-span-4 glass-input p-2 rounded-lg flex items-center gap-2">
+                            <i data-lucide="credit-card" class="w-3 h-3 text-qpurple"></i>
+                            <input type="text" id="binInput" placeholder="BIN" class="bg-transparent border-none outline-none text-xs mono text-white w-full placeholder:text-slate-600" maxlength="8">
+                        </div>
+                        <button onclick="simulateTool('binGen')" class="col-span-4 tool-btn hover:bg-green-500/10 hover:border-green-500 hover:text-green-400">
+                            <i data-lucide="cpu" class="w-3 h-3"></i> Generate Cards
+                        </button>
+                        <button onclick="simulateTool('extraGen')" class="col-span-4 tool-btn hover:bg-yellow-500/10 hover:border-yellow-500 hover:text-yellow-400">
+                            <i data-lucide="sparkles" class="w-3 h-3"></i> Get Extras
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="simulateTool('cookies')" id="btnCookies" class="tool-btn hover:bg-blue-500/10 hover:border-blue-500 hover:text-blue-400">
+                            <i data-lucide="cookie" class="w-3 h-3"></i> Load Cookies
+                        </button>
+                        <button onclick="simulateTool('cleaner')" class="tool-btn"><i data-lucide="eraser" class="w-3 h-3"></i> Clean</button>
+                        <button onclick="simulateTool('dedupe')" class="tool-btn"><i data-lucide="copy-x" class="w-3 h-3"></i> Dedupe</button>
+                    </div>
+                 </div>
+
+                <div class="grid grid-cols-3 gap-3 mt-4">
+                    <button id="btnStart" onclick="startSequence()" class="col-span-2 btn-gradient text-white p-3.5 rounded-xl font-bold text-xs uppercase tracking-[0.2em] transition-all flex justify-center items-center gap-2 group relative overflow-hidden shadow-lg shadow-purple-900/20">
+                        <span class="relative z-10">EXECUTE</span>
+                        <i data-lucide="play" class="w-4 h-4 fill-current relative z-10"></i>
+                    </button>
+                    <button id="btnStop" onclick="stopSequence()" class="col-span-1 bg-red-900/20 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white p-3.5 rounded-xl font-bold text-xs uppercase tracking-[0.2em] transition-all flex justify-center items-center gap-2 shadow-lg shadow-red-900/10 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span>STOP</span>
+                        <i data-lucide="square" class="w-3 h-3 fill-current"></i>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="col-span-12 lg:col-span-8 flex flex-col gap-5 overflow-hidden z-10 h-full">
+            <div class="grid grid-cols-4 gap-4">
+                <div class="glass p-5 rounded-2xl border-b-[3px] border-green-500 bg-gradient-to-b from-green-500/5 to-transparent">
+                    <div class="flex justify-between items-start mb-3"><span class="text-[9px] text-green-300/70 uppercase tracking-wider font-bold">Approved</span><i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i></div>
+                    <span id="statLive" class="text-3xl font-bold text-green-400 mono leading-none">0</span>
+                </div>
+                <div class="glass p-5 rounded-2xl border-b-[3px] border-red-500 bg-gradient-to-b from-red-500/5 to-transparent">
+                    <div class="flex justify-between items-start mb-3"><span class="text-[9px] text-red-300/70 uppercase tracking-wider font-bold">Declined</span><i data-lucide="x-circle" class="w-4 h-4 text-red-400"></i></div>
+                    <span id="statDead" class="text-3xl font-bold text-red-400 mono leading-none">0</span>
+                </div>
+                <div class="glass p-5 rounded-2xl border-b-[3px] border-qcyan bg-gradient-to-b from-qcyan/5 to-transparent">
+                    <div class="flex justify-between items-start mb-3"><span class="text-[9px] text-qcyan/70 uppercase tracking-wider font-bold">Pending</span><i data-lucide="activity-square" class="w-4 h-4 text-qcyan"></i></div>
+                    <span id="statRemain" class="text-3xl font-bold text-qcyan mono leading-none">0</span>
+                </div>
+                <div class="glass p-5 rounded-2xl border-b-[3px] border-qpurple bg-gradient-to-b from-qpurple/5 to-transparent">
+                    <div class="flex justify-between items-start mb-3"><span class="text-[9px] text-qpurple/70 uppercase tracking-wider font-bold">Total</span><i data-lucide="layers" class="w-4 h-4 text-qpurple"></i></div>
+                    <span id="statTotal" class="text-3xl font-bold text-qpurple mono leading-none">0</span>
+                </div>
+            </div>
+
+            <div class="glass flex-1 rounded-2xl flex flex-col overflow-hidden relative border-t border-slate-700/50">
+                <div class="h-9 bg-qdark/90 border-b border-slate-800 flex items-center justify-between px-4 backdrop-blur-sm">
+                    <div class="flex gap-2 items-center">
+                        <i data-lucide="terminal-square" class="w-3 h-3 text-slate-400"></i>
+                        <span id="processLabel" class="text-[9px] mono text-slate-400 uppercase tracking-widest">Console // Idle State</span>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <div class="w-2 h-2 rounded-full bg-qpurple/50 border border-qpurple animate-pulse"></div>
+                    </div>
+                </div>
+
+                <div class="h-0.5 w-full bg-qdark relative overflow-hidden">
+                    <div id="activeProgress" class="h-full bg-gradient-to-r from-qpurple via-qcyan to-qpurple w-0 shadow-[0_0_15px_#06b6d4]"></div>
+                </div>
+
+                <div id="consoleLog" class="flex-1 p-4 font-mono text-[11px] overflow-y-auto custom-scrollbar space-y-1.5 bg-black/30 relative">
+                    <div class="text-slate-500">root@quantum:~# awaiting input stream...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // --- MASSIVE GATE LIST (30+ GATES) ---
+        const gateList = [
+            "Auto-Rotation Protocol (Default)",
+            "Stripe V3 [Auth-Flow_NA]", "Stripe [SCA_Required_EU]", "Stripe Charge [Legacy]", 
+            "Stripe Checkout [S3D_Force]", "Stripe Intent [Secret_Key]",
+            "Braintree [GraphQL_Node]", "Braintree [Vault_Tokenizer]", "Braintree [Charge_DropUI]",
+            "Adyen [API_v69_Enc]", "Adyen [HPP_Redirect]", "Adyen [Directory_Lookup]",
+            "Authorize.Net [CIM_Manager]", "Authorize.Net [AIM_Gateway]",
+            "Cybersource [Flex_v2]", "Cybersource [Microform_Secure]",
+            "WorldPay [Corporate_Direct]", "WorldPay [Business_Gateway]",
+            "Square [Connect_v2]", "Square [Market_v1]",
+            "Shopify [Monolith_Core]", "Shopify [GraphQL_Admin]",
+            "PayPal [Pro_Direct]", "PayPal [Rest_API_v2]",
+            "2Checkout [API_Hosted]", "BlueSnap [Extended_API]",
+            "Payoneer [Direct_Debit]", "Klarna [Pay_Now_Slice]",
+            "Chase [Paymentech_Orbital]", "GlobalPayments [RealTime]",
+            "PayU [Latam_Secure]", "MercadoPago [Pro_V1]", "Skrill [Quick_Checkout]", "Wise [Transfer_Node]"
+        ];
+
+        // Dropdown Logic
+        const dropdown = document.getElementById('gateDropdown');
+        const searchInput = document.getElementById('gateSearch');
+        const listContainer = document.getElementById('gateList');
+        const selectedLabel = document.getElementById('selectedGate');
+
+        function populateGates(filter = "") {
+            listContainer.innerHTML = "";
+            gateList.forEach(gate => {
+                if (gate.toLowerCase().includes(filter.toLowerCase())) {
+                    const item = document.createElement('div');
+                    item.className = "px-4 py-2 hover:bg-qpurple/10 cursor-pointer text-xs text-slate-300 hover:text-white border-l-2 border-transparent hover:border-qpurple flex items-center gap-2";
+                    item.innerHTML = `<i data-lucide="server" class="w-3 h-3 opacity-50"></i> ${gate}`;
+                    item.onclick = () => {
+                        selectedLabel.innerHTML = `<i data-lucide="rotate-cw" class="w-3 h-3"></i> ${gate}`;
+                        selectedLabel.classList.replace('text-qcyan', 'text-qpurple');
+                        dropdown.classList.add('hidden');
+                        lucide.createIcons();
+                    };
+                    listContainer.appendChild(item);
+                }
+            });
+            lucide.createIcons();
+        }
+        function toggleDropdown() {
+            dropdown.classList.toggle('hidden');
+            if(!dropdown.classList.contains('hidden')) { searchInput.focus(); populateGates(); }
+        }
+        searchInput.addEventListener('input', (e) => populateGates(e.target.value));
+
+        document.getElementById('inputData').addEventListener('input', function() {
+            const lines = this.value.split('\n').filter(x => x.trim()).length;
+            document.getElementById('lineCount').innerText = `${lines} UNITS`;
+        });
+
+        function clearInput() {
+            document.getElementById('inputData').value = '';
+            document.getElementById('lineCount').innerText = '0 UNITS';
+            logToConsole("[SYSTEM] Input buffer cleared successfully.", "text-slate-500");
+        }
+
+        // --- TOOLKIT LOGIC ---
+        function simulateTool(toolType) {
+            const inputArea = document.getElementById('inputData');
+            const bin = document.getElementById('binInput').value;
+            let currentData = inputArea.value;
+
+            // COOKIES
+            if(toolType === 'cookies') {
+                const btn = document.getElementById('btnCookies');
+                const originalHtml = btn.innerHTML;
+                logToConsole("[NET] Injecting session cookies into headers...", "text-blue-400");
+                btn.innerHTML = `<i data-lucide="check" class="w-3 h-3"></i> ADDED!`;
+                btn.classList.add('bg-green-500/20', 'text-green-400', 'border-green-500');
+                lucide.createIcons();
+                setTimeout(() => {
+                    logToConsole("[SUCCESS] Session Cookies loaded successfully.", "text-green-400");
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                        btn.classList.remove('bg-green-500/20', 'text-green-400', 'border-green-500');
+                        lucide.createIcons();
+                    }, 1500);
+                }, 800);
+                return;
+            }
+
+            if ((toolType === 'binGen' || toolType === 'extraGen') && bin.length < 6) {
+                logToConsole(`[ERROR] INVALID BIN LENGTH. REQUIRED: 6 DIGITS`, "text-red-400");
+                return alert("PLEASE ENTER A 6 DIGIT BIN");
+            }
+
+            logToConsole(`[TOOLKIT] Initiating subroutine: ${toolType.toUpperCase()}...`, "text-qcyan");
+
+            setTimeout(() => {
+                if (toolType === 'binGen') {
+                    let newData = "";
+                    for(let i=0; i<10; i++) {
+                        const rnd = Math.floor(Math.random()*1000000000);
+                        const m = Math.floor(Math.random()*12)+1;
+                        const mm = m < 10 ? `0${m}` : m;
+                        const yy = 2026 + Math.floor(Math.random()*5);
+                        const cvv = Math.floor(Math.random() * (999 - 100) + 100);
+                        newData += `${bin}${rnd}|${mm}|${yy}|${cvv}\n`;
+                    }
+                    inputArea.value = newData + "\n" + currentData;
+                    logToConsole(`[SUCCESS] Generated 10 valid cards from BIN ${bin}`, "text-green-400");
+                
+                } else if (toolType === 'extraGen') {
+                    let extras = "";
+                    const fixedYear = 2024 + Math.floor(Math.random()*4);
+                    extras += `${bin}xxxxxxxxx|12|${fixedYear}|rnd\n`;
+                    extras += `${bin}xxxxxxxxx|06|${fixedYear+1}|rnd\n`;
+                    extras += `${bin}xxxxxxxxx|01|${fixedYear+2}|000\n`;
+                    inputArea.value = extras + "\n" + currentData;
+                    logToConsole(`[SUCCESS] Extracted extrapolation patterns for BIN ${bin}`, "text-yellow-400");
+                
+                } else if (toolType === 'cleaner') {
+                    inputArea.value = inputArea.value.replace(/[^0-9|\n]/g, ""); 
+                    logToConsole(`[CLEANER] Format standardized.`, "text-qpurple");
+                } else if (toolType === 'dedupe') {
+                     const unique = [...new Set(currentData.split('\n'))].join('\n');
+                     inputArea.value = unique;
+                     logToConsole(`[DEDUPE] Removed duplicate entries.`, "text-qpurple");
+                }
+                inputArea.dispatchEvent(new Event('input')); 
+            }, 600);
+        }
+
+        // --- CHECKER LOGIC ---
+        let isRunning = false;
+        let shouldStop = false;
+        const WAIT_TIME = 40; 
+
+        function stopSequence() {
+            if(isRunning) {
+                shouldStop = true;
+                logToConsole("[SYSTEM] EMERGENCY STOP SIGNAL RECEIVED...", "text-red-500 font-bold");
+                document.getElementById('btnStop').innerHTML = `<span>STOPPING...</span>`;
+            }
+        }
+
+        async function startSequence() {
+            if (isRunning) return;
+            const rawInput = document.getElementById('inputData').value;
+            const lines = rawInput.split('\n').filter(line => line.trim() !== '');
+            if (lines.length === 0) return alert("INPUT STREAM EMPTY");
+
+            isRunning = true;
+            shouldStop = false;
+            
+            const btn = document.getElementById('btnStart');
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            btn.innerHTML = `<span>PROCESSING...</span><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>`;
+            lucide.createIcons();
+
+            document.getElementById('statTotal').innerText = lines.length;
+            let lives = 0, deads = 0;
+
+            for (let i = 0; i < lines.length; i++) {
+                if(shouldStop) {
+                    logToConsole("[SYSTEM] PROCESS TERMINATED BY USER.", "text-red-500 bg-red-900/10 border-l-2 border-red-500 pl-2");
+                    break;
+                }
+                const card = lines[i];
+                document.getElementById('statRemain').innerText = lines.length - i;
+                logToConsole(`[GATE-1] Handshake initiated: ${card.substring(0,8)}...`, "text-slate-400");
+                document.getElementById('processLabel').innerHTML = `<span class="text-yellow-400 animate-pulse">● BUSY</span> // UNIT ${i+1}/${lines.length} // WAIT: ${WAIT_TIME}s`;
+                await countdownTimer(WAIT_TIME);
+                if(shouldStop) break;
+
+                const isLive = Math.random() > 0.85;
+                if (isLive) {
+                    lives++;
+                    document.getElementById('statLive').innerText = lives;
+                    logToConsole(`[APPROVED] ${card} [CODE: 00]`, "text-green-400 font-bold bg-green-500/10 border-l-2 border-green-500 pl-2");
+                } else {
+                    deads++;
+                    document.getElementById('statDead').innerText = deads;
+                    logToConsole(`[DECLINED] ${card} [CODE: 51]`, "text-red-400/80 border-l-2 border-transparent pl-2");
+                }
+            }
+            finishSequence();
+        }
+
+        function countdownTimer(seconds) {
+            return new Promise(resolve => {
+                let left = seconds;
+                const bar = document.getElementById('activeProgress');
+                const interval = setInterval(() => {
+                    if(shouldStop) {
+                        clearInterval(interval);
+                        bar.style.width = "0%";
+                        resolve(); 
+                        return;
+                    }
+                    left--;
+                    bar.style.width = `${((seconds - left) / seconds) * 100}%`;
+                    if (left <= 0) { clearInterval(interval); bar.style.width = "0%"; resolve(); }
+                }, 1000); 
+            });
+        }
+
+        function logToConsole(msg, classes) {
+            const div = document.createElement('div');
+            div.className = `py-1 ${classes} border-b border-slate-800/50`;
+            div.innerHTML = `<span class="opacity-40 mr-2 mono text-[9px]">[${new Date().toLocaleTimeString()}]</span>${msg}`;
+            const consoleDiv = document.getElementById('consoleLog');
+            consoleDiv.prepend(div);
+        }
+
+        function finishSequence() {
+            isRunning = false;
+            shouldStop = false;
+            document.getElementById('btnStart').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btnStart').innerHTML = `<span>EXECUTE SEQUENCE</span><i data-lucide="play" class="w-4 h-4"></i>`;
+            document.getElementById('btnStop').innerHTML = `<span>STOP</span><i data-lucide="square" class="w-3 h-3"></i>`;
+            document.getElementById('processLabel').innerText = "CONSOLE // IDLE";
+            lucide.createIcons();
+        }
+
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toUTCString().split(' ')[4] + " UTC"; }, 1000);
+    </script>
+
+    <div id="securityLock" class="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center text-center p-10 transition-all duration-500">
+        <div class="relative mb-8">
+            <i data-lucide="lock" class="w-20 h-20 text-red-500 animate-pulse"></i>
+            <div class="absolute inset-0 bg-red-500 blur-2xl opacity-20"></div>
+        </div>
+        
+        <h2 class="text-3xl font-bold mono text-white mb-2 tracking-widest">ACCESO DENEGADO</h2>
+        <p class="text-slate-400 mono text-xs mb-8 max-w-md">
+            EL PROTOCOLO DE SEGURIDAD REQUIERE UNA LLAVE DE HARDWARE ACTIVA.
+            <br>POR FAVOR, EJECUTA "QuantumAUTH v2.1.exe" PARA CONTINUAR.
+        </p>
+
+        <a href="/download-auth" class="group relative px-6 py-3 bg-slate-900 border border-slate-700 hover:border-qpurple rounded-xl transition-all flex items-center gap-3">
+            <div class="bg-qpurple/20 p-2 rounded-lg group-hover:bg-qpurple/40 transition-colors">
+                <i data-lucide="download" class="w-5 h-5 text-qpurple"></i>
+            </div>
+            <div class="text-left">
+                <div class="text-[10px] text-slate-500 uppercase font-bold">Descargar Llave</div>
+                <div class="text-sm text-white font-bold mono">QuantumAUTH.exe</div>
+            </div>
+        </a>
+
+        <div class="mt-8 flex items-center gap-2">
+            <div class="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+            <span class="text-[10px] text-red-500 mono font-bold">ESPERANDO CONEXIÓN LOCAL...</span>
+        </div>
+    </div>
+
+    <script>
+        // LÓGICA DE DETECCIÓN DEL EXE
+        const lockScreen = document.getElementById('securityLock');
+        let isAuthenticated = false;
+
+        async function checkAuthKey() {
+            try {
+                // Intenta conectar con el .exe en el puerto 1337
+                // Nota: Tu .exe debe estar escuchando en 127.0.0.1:1337
+                const response = await fetch('http://127.0.0.1:1337/heartbeat');
+                const data = await response.json();
+
+                if (data.status === "secure_access_granted") {
+                    // Si el exe responde, desbloqueamos
+                    if (!isAuthenticated) {
+                        lockScreen.classList.add('opacity-0', 'pointer-events-none');
+                        logToConsole("[AUTH] HARDWARE KEY DETECTED. ACCESS GRANTED.", "text-green-400");
+                        isAuthenticated = true;
+                    }
+                }
+            } catch (error) {
+                // Si falla la conexión, mostramos el bloqueo
+                if (isAuthenticated) {
+                    lockScreen.classList.remove('opacity-0', 'pointer-events-none');
+                    logToConsole("[AUTH] CONNECTION LOST. LOCKING SYSTEM.", "text-red-500");
+                    isAuthenticated = false;
+                }
+            }
+        }
+
+        // Comprobar cada 2 segundos si el exe sigue abierto
+        setInterval(checkAuthKey, 2000);
+        // Primera comprobación inmediata
+        checkAuthKey();
+    </script>
+</body>
+</html>

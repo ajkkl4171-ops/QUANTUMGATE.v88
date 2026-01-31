@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Gate | Access</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
+</head>
+<body class="h-screen flex items-center justify-center bg-slate-950 overflow-hidden relative">
+
+    <div class="absolute inset-0 z-0">
+        <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-purple-600/20 rounded-full blur-[100px]"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-64 h-64 bg-blue-600/20 rounded-full blur-[100px]"></div>
+    </div>
+
+    <div class="glass w-full max-w-sm rounded-2xl p-8 shadow-2xl relative z-10 border-t border-slate-700">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold tracking-tighter">Quantum<span class="text-purple-500">Gate</span></h1>
+            <p class="text-[10px] uppercase tracking-widest text-slate-500 mt-1">Secure Database Access</p>
+        </div>
+        
+        <div class="flex bg-slate-900/80 rounded-lg mb-6 p-1 border border-slate-800">
+            <button onclick="setMode('login')" id="btnLoginMode" class="flex-1 py-2 rounded text-[10px] font-bold tracking-wider transition-all bg-slate-700 text-white shadow">LOGIN</button>
+            <button onclick="setMode('register')" id="btnRegMode" class="flex-1 py-2 rounded text-[10px] font-bold tracking-wider transition-all text-slate-500 hover:text-slate-300">REGISTRO</button>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Usuario (Email / User)</label>
+                <input id="contactInput" type="text" placeholder="admin@quantum.com" class="w-full bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-xs text-white outline-none focus:border-purple-500 transition-colors mono">
+            </div>
+
+            <div>
+                <label class="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Contraseña</label>
+                <input id="passInput" type="password" placeholder="••••••••" class="w-full bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-xs text-white outline-none focus:border-purple-500 transition-colors mono">
+            </div>
+
+            <button onclick="executeAction()" id="actionBtn" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg text-xs transition-all shadow-lg shadow-purple-900/20 uppercase tracking-widest mt-2">
+                INICIAR SESIÓN
+            </button>
+        </div>
+        
+        <div id="msg" class="text-center mt-4 text-[10px] font-bold h-4 text-red-400"></div>
+    </div>
+
+    <script>
+        let mode = 'login';
+        
+        function setMode(newMode) {
+            mode = newMode;
+            // Estilos del Toggle
+            const activeClass = "bg-slate-700 text-white shadow";
+            const inactiveClass = "text-slate-500 hover:text-slate-300";
+            
+            document.getElementById('btnLoginMode').className = `flex-1 py-2 rounded text-[10px] font-bold tracking-wider transition-all ${mode === 'login' ? activeClass : inactiveClass}`;
+            document.getElementById('btnRegMode').className = `flex-1 py-2 rounded text-[10px] font-bold tracking-wider transition-all ${mode === 'register' ? activeClass : inactiveClass}`;
+            
+            // Texto del botón
+            document.getElementById('actionBtn').innerText = mode === 'login' ? "ENTRAR AL SISTEMA" : "CREAR CUENTA NUEVA";
+            document.getElementById('msg').innerText = "";
+        }
+
+        async function executeAction() {
+            const contact = document.getElementById('contactInput').value;
+            const password = document.getElementById('passInput').value;
+            const msgBox = document.getElementById('msg');
+
+            if(!contact || !password) {
+                msgBox.innerText = "Error: Rellena todos los campos.";
+                return;
+            }
+
+            const btn = document.getElementById('actionBtn');
+            const originalText = btn.innerText;
+            btn.innerText = "PROCESANDO...";
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+
+            try {
+                // Determinar endpoint (login o register)
+                const endpoint = mode === 'login' ? '/login' : '/register';
+                
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contact, password })
+                });
+                
+                const data = await res.json();
+                
+                if(data.status === 'success') {
+                    // Éxito: Redirigir
+                    window.location.href = data.redirect;
+                } else {
+                    // Error: Mostrar mensaje
+                    msgBox.innerText = data.message;
+                    msgBox.className = "text-center mt-4 text-[10px] font-bold h-4 text-red-400";
+                }
+            } catch (e) {
+                msgBox.innerText = "Error de conexión con server.py";
+            }
+
+            btn.innerText = originalText;
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+        }
+    </script>
+</body>
+</html>
